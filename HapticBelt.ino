@@ -1,3 +1,14 @@
+/*
+   Sensitivity buttons
+   Lower Power Battery Sensor
+   Turn on and off the glasses front and back
+   Overall on off switch
+
+
+
+
+*/
+
 #define echoPin1 9 // attach pin D2 Arduino to pin Echo of HC-SR04
 #define pingPin1 8
 #define echoPin2 10
@@ -9,9 +20,14 @@
 
 
 
-volatile int distance1;
-volatile int distance2;
+volatile float distance1;
+volatile float distance2;
 volatile int Sensitivity = 110;
+volatile float avgD1[10];
+volatile float avgD1Off[] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+volatile float avgD1Num = 0;
+volatile int i = 0;
+volatile int k = 0;
 
 
 void Echo1();
@@ -34,82 +50,78 @@ void setup() {
 
 void loop() {
   // put your main code here, to run repeatedly:
-  
-  while (digitalRead(increase)) {
-    if (Sensitivity < 130) {
 
-      Sensitivity += 5;
-      analogWrite(haptic1, Sensitivity);
-      analogWrite(haptic2, Sensitivity); 
-    } else {
-      delay(500);
-      analogWrite(haptic1, 0);
-      analogWrite(haptic2, 0);
-    }
-    delay(300);
-  }
-  
-  while (digitalRead(decrease)) {
-    if (Sensitivity > 50) {
-
-      Sensitivity -= 5;
-      analogWrite(haptic1, Sensitivity);
-      analogWrite(haptic2, Sensitivity);
-    } else {
-      delay(500);
-      analogWrite(haptic1, 0);
-      analogWrite(haptic2, 0);
-    }
-    delay(300);
-  }
 
   Echo1();
+  if (i < 10) {
+    avgD1[i] = distance1;
+  } else if (i == 10) {
+    avgD1Num = getAverage(avgD1);
+  } else if (i > 10) {
+    if (distance1 < avgD1Num * 1.2 && distance1 > avgD1Num * 0.8) {
+      avgD1[i % 10] = distance1;
+      avgD1Num = getAverage(avgD1);
+      k = 0;
+    } else {
+      avgD1Off[k % 10] = distance1;
+      k++;
+      if (k == 10) {
 
-  
+        for (int j = 0; j < 10; j++) {
+          avgD1[j] = avgD1Off[j];
+          avgD1Off[j]=0;
+        }
+      
+      }
+    }
+
+
+
+  }
+
 
   Echo2();
 
-
+  i++;
 }
 
 void Echo1() {
-  distance1 = 0;
-  for (int i = 0; i < 5; i++) {
-    delay(100);
-
-    digitalWrite(pingPin1, LOW);
-    delayMicroseconds(2);
-    digitalWrite(pingPin1, HIGH);
-    delayMicroseconds(10);
-    digitalWrite(pingPin1, LOW);
-
-    int duration1 = pulseIn(echoPin1, HIGH);
 
 
-    distance1 += duration1 * 0.034 / 2;
+
+  digitalWrite(pingPin1, LOW);
+  delayMicroseconds(2);
+  digitalWrite(pingPin1, HIGH);
+  delayMicroseconds(10);
+  digitalWrite(pingPin1, LOW);
+
+  int duration1 = pulseIn(echoPin1, HIGH);
 
 
-  }
-  distance1 = distance1 / 5;
-  Serial.println(distance1);
+  distance1 = duration1 * 0.034 / 2;
 
-  if (distance1 < 8) {
-    analogWrite(haptic1, Sensitivity);
 
-  } else if (distance1 < 15) {
-    analogWrite(haptic1, Sensitivity);
-    delay(300);
-    analogWrite(haptic1, 0);
-    delay(100);
-  } else if (distance1 < 30) {
-    analogWrite(haptic1, Sensitivity);
-    delay(200);
-    analogWrite(haptic1, 0);
-    delay(100);
-  }
-  else {
-    analogWrite(haptic1, 0);
-  }
+
+  //  distance1 = distance1 / 5;
+  //  Serial.println(distance1);
+  //
+  //  if (distance1 < 8) {
+  //    analogWrite(haptic1, Sensitivity);
+  //
+  //  } else if (distance1 < 15) {
+  //    analogWrite(haptic1, Sensitivity);
+  //    delay(300);
+  //    analogWrite(haptic1, 0);
+  //    delay(100);
+  //  } else if (distance1 < 30) {
+  //    analogWrite(haptic1, Sensitivity);
+  //    delay(200);
+  //    analogWrite(haptic1, 0);
+  //    delay(100);
+  //  }
+  //  else {
+  //    analogWrite(haptic1, 0);
+  //  }
 
 
 
@@ -133,7 +145,7 @@ void Echo2() {
 
   Serial.println(distance2);
 
-    if (distance2 < 8) {
+  if (distance2 < 8) {
     analogWrite(haptic2, Sensitivity);
 
   } else if (distance2 < 15) {
@@ -151,4 +163,45 @@ void Echo2() {
     analogWrite(haptic2, 0);
   }
 
+}
+
+void sensitivity() {
+  while (digitalRead(increase)) {
+    if (Sensitivity < 130) {
+
+      Sensitivity += 5;
+      analogWrite(haptic1, Sensitivity);
+      analogWrite(haptic2, Sensitivity);
+    } else {
+      delay(500);
+      analogWrite(haptic1, 0);
+      analogWrite(haptic2, 0);
+    }
+    delay(300);
+  }
+
+  while (digitalRead(decrease)) {
+    if (Sensitivity > 50) {
+
+      Sensitivity -= 5;
+      analogWrite(haptic1, Sensitivity);
+      analogWrite(haptic2, Sensitivity);
+    } else {
+      delay(500);
+      analogWrite(haptic1, 0);
+      analogWrite(haptic2, 0);
+    }
+    delay(300);
+  }
+
+
+}
+
+float getAverage(volatile float arr[]) {
+  float avg = 0;
+  for (int i = 0; i < 10; i++) {
+    avg += arr[i];
+  }
+  avg = avg / 10.0;
+  return avg;
 }
